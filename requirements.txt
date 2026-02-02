@@ -1,0 +1,8 @@
+flask>=3.0.0
+flask-cors>=4.0.0
+requests>=2.31.0
+selenium>=4.15.0
+webdriver-manager>=4.0.0
+# AudioShake SDK integration (uses REST API via requests)
+# Note: AudioShake credentials required via environment variables
+# AUDIOSHAKE_CLIENT_ID and AUDIOSHAKE_CLIENT_SECRET

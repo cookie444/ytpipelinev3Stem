@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Downloader</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <div>
+                    <h1>📥 YouTube Downloader</h1>
+                    <p class="subtitle">Download YouTube videos via y2down.cc</p>
+                </div>
+                <button id="logout-btn" class="btn btn-secondary" style="margin-top: 0;">Logout</button>
+            </div>
+        </header>
+
+        <main>
+            <div class="card">
+                <h2>Download Video</h2>
+                
+                <div class="form-group">
+                    <label for="youtube-url">YouTube URL:</label>
+                    <input type="text" id="youtube-url" placeholder="https://www.youtube.com/watch?v=..." class="input-field">
+                    <small class="help-text">Enter a YouTube video URL</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="file-location">File Location (informational):</label>
+                    <input type="text" id="file-location" value="C:\Users\bmack\Downloads" class="input-field" readonly>
+                    <small class="help-text">Files will download to your browser's default Downloads folder</small>
+                </div>
+
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" id="separate-stems" style="margin-right: 8px; width: auto;">
+                        <span>Separate into stems (vocals, drums, bass, other)</span>
+                    </label>
+                    <small class="help-text">Uses AudioShake SDK to separate audio into individual stems</small>
+                </div>
+
+                <button id="download-btn" class="btn btn-primary">
+                    <span id="btn-text">Download Video</span>
+                    <span id="btn-spinner" class="spinner hidden"></span>
+                </button>
+
+                <div id="status" class="status-message"></div>
+            </div>
+
+            <div class="card" id="stem-separation-card" style="display: none;">
+                <h2>Stem Separation</h2>
+                <div id="stem-separation-status" class="status-message"></div>
+                <div id="stem-separation-progress" style="margin-top: 15px;">
+                    <div class="progress-container">
+                        <div class="progress-bar">
+                            <div id="stem-progress-fill" class="progress-fill" style="width: 0%;"></div>
+                        </div>
+                        <div id="stem-progress-text" class="progress-text">Waiting...</div>
+                    </div>
+                </div>
+                <div id="stem-results" style="margin-top: 20px; display: none;">
+                    <h3>Separated Stems</h3>
+                    <p>Stem separation completed! Download the zip file containing all stems:</p>
+                    <button id="download-stems-btn" class="btn btn-primary" style="margin-top: 10px;">
+                        Download Stems (ZIP)
+                    </button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Progress</h2>
+                <div class="progress-container">
+                    <div id="progress-bar" class="progress-bar">
+                        <div id="progress-fill" class="progress-fill"></div>
+                    </div>
+                    <div id="progress-text" class="progress-text">Ready</div>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>YouTube Downloader with Stem Separation v2.0</p>
+        </footer>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>
