@@ -5,6 +5,7 @@ Uses Selenium headless browser to handle JavaScript-rendered content
 """
 
 import logging
+import os
 from typing import Optional, Tuple
 import time
 from selenium import webdriver
@@ -39,12 +40,49 @@ def get_download_url(youtube_url: str) -> Tuple[Optional[str], Optional[str], Op
         chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
         chrome_options.add_experimental_option('useAutomationExtension', False)
         
+        # Try to find Chrome/Chromium binary (for Render/Linux environments)
+        chrome_binary_paths = [
+            '/usr/bin/chromium-browser',
+            '/usr/bin/chromium',
+            '/usr/bin/google-chrome',
+            '/usr/bin/chrome',
+        ]
+        chrome_binary = None
+        for path in chrome_binary_paths:
+            if os.path.exists(path):
+                chrome_binary = path
+                chrome_options.binary_location = chrome_binary
+                logger.info(f"Using Chrome binary: {chrome_binary}")
+                break
+        
+        # Try to find ChromeDriver (for Render/Linux environments)
+        chromedriver_paths = [
+            '/usr/bin/chromedriver',
+            '/usr/lib/chromium-browser/chromedriver',
+        ]
+        chromedriver_path = None
+        for path in chromedriver_paths:
+            if os.path.exists(path):
+                chromedriver_path = path
+                logger.info(f"Using ChromeDriver: {chromedriver_path}")
+                break
+        
         try:
-            from webdriver_manager.chrome import ChromeDriverManager
-            service = Service(ChromeDriverManager().install())
-            driver = webdriver.Chrome(service=service, options=chrome_options)
-        except:
-            driver = webdriver.Chrome(options=chrome_options)
+            if chromedriver_path:
+                service = Service(chromedriver_path)
+                driver = webdriver.Chrome(service=service, options=chrome_options)
+            else:
+                # Fallback to webdriver-manager
+                from webdriver_manager.chrome import ChromeDriverManager
+                service = Service(ChromeDriverManager().install())
+                driver = webdriver.Chrome(service=service, options=chrome_options)
+        except Exception as e:
+            logger.warning(f"Failed to use ChromeDriverManager: {e}, trying default Chrome")
+            try:
+                driver = webdriver.Chrome(options=chrome_options)
+            except Exception as e2:
+                logger.error(f"Failed to start Chrome: {e2}")
+                return None, None, None
         
         logger.info("Headless browser started")
         driver.get(base_url)
