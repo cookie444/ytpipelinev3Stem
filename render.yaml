@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: ytpipeline-stem-separation
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn api_server:app --bind 0.0.0.0:$PORT
+    envVars:
+      - key: APP_PASSWORD
+        value: CookieRocks
+      - key: SECRET_KEY
+        generateValue: true
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        fromService:
+          type: web
+          name: ytpipeline-stem-separation
+          property: port
+

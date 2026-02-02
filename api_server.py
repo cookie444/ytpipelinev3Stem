@@ -300,14 +300,30 @@ def separate_stems():
             
             logger.info(f"Stem separation completed. Generated {len(stem_files)} stems")
             
-            # Step 3: Create zip archive of stems
+            # Step 3: Create zip archive of stems + original audio
             zip_path = os.path.join(temp_dir, 'stems.zip')
             with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                # Add original audio file (always include it)
+                if audio_file_path and os.path.exists(audio_file_path):
+                    # Get file extension
+                    file_ext = os.path.splitext(audio_file_path)[1].lower()
+                    # Use appropriate name based on format
+                    if file_ext == '.wav':
+                        original_zip_name = 'original.wav'
+                    else:
+                        # Keep original extension but use clear name
+                        original_zip_name = f'original{file_ext}'
+                    
+                    zipf.write(audio_file_path, original_zip_name)
+                    logger.info(f"Added original audio to zip: {audio_file_path} as {original_zip_name}")
+                
+                # Add all separated stems
                 for stem_name, stem_path in stem_files.items():
                     if os.path.exists(stem_path):
                         zipf.write(stem_path, os.path.basename(stem_path))
+                        logger.info(f"Added stem to zip: {stem_name} -> {os.path.basename(stem_path)}")
             
-            logger.info(f"Created zip archive: {zip_path}")
+            logger.info(f"Created zip archive with original audio and {len(stem_files)} stems: {zip_path}")
             
             # Step 4: Return zip file
             return send_from_directory(
