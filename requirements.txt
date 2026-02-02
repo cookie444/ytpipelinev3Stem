@@ -3,6 +3,7 @@ flask-cors>=4.0.0
 requests>=2.31.0
 selenium>=4.15.0
 webdriver-manager>=4.0.0
-# AudioShake SDK integration (uses REST API via requests)
-# Note: AudioShake credentials required via environment variables
-# AUDIOSHAKE_CLIENT_ID and AUDIOSHAKE_CLIENT_SECRET
+# Demucs v4 for stem separation
+demucs>=4.0.0
+torch>=2.0.0
+torchaudio>=2.0.0

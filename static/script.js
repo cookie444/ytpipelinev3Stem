@@ -160,8 +160,8 @@ async function handleStemSeparation(youtubeUrl) {
             throw new Error(errorData.error || `Server error: ${response.status}`);
         }
 
-        updateStemProgress(50, 'Processing stems with AudioShake...');
-        showStemStatus('Separating audio into stems...', 'info');
+        updateStemProgress(50, 'Processing stems with Demucs v4...');
+        showStemStatus('Separating audio into stems (this may take a few minutes)...', 'info');
 
         // Download the zip file
         const blob = await response.blob();

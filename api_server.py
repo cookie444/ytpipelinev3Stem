@@ -12,7 +12,7 @@ from pathlib import Path
 from functools import wraps
 import secrets
 from downloader import get_download_url, stream_download
-from stem_separator import AudioShakeSeparator
+from stem_separator import DemucsSeparator
 import tempfile
 import shutil
 import zipfile
@@ -284,9 +284,9 @@ def separate_stems():
                 uploaded_file.save(audio_file_path)
                 logger.info(f"Uploaded file saved to: {audio_file_path}")
             
-            # Step 2: Separate stems
-            logger.info("Starting stem separation...")
-            separator = AudioShakeSeparator()
+            # Step 2: Separate stems using Demucs v4
+            logger.info("Starting stem separation with Demucs v4...")
+            separator = DemucsSeparator(model="htdemucs")
             output_dir = os.path.join(temp_dir, 'stems')
             os.makedirs(output_dir, exist_ok=True)
             
@@ -338,32 +338,6 @@ def separate_stems():
         return jsonify({
             'success': False,
             'error': f'Error processing request: {str(e)}'
-        }), 500
-
-
-@app.route('/api/separate-stems-status', methods=['GET'])
-@login_required
-def separate_stems_status():
-    """Check status of stem separation task (for async operations)."""
-    task_id = request.args.get('task_id')
-    if not task_id:
-        return jsonify({
-            'success': False,
-            'error': 'Missing task_id parameter'
-        }), 400
-    
-    try:
-        separator = AudioShakeSeparator()
-        status = separator.check_task_status(task_id)
-        return jsonify({
-            'success': True,
-            'status': status
-        }), 200
-    except Exception as e:
-        logger.error(f"Error checking task status: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
         }), 500
 
 

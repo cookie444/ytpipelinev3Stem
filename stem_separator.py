@@ -1,272 +1,39 @@
 #!/usr/bin/env python3
 """
-Stem Separation Module using AudioShake SDK/API
-Handles audio stem separation via AudioShake API
+Stem Separation Module using Demucs v4
+Handles audio stem separation using Facebook's Demucs v4 model
 """
 
 import logging
 import os
-import time
-import requests
-from typing import Optional, Dict, List, Tuple
+import subprocess
+from typing import Optional, Dict
 from pathlib import Path
 import tempfile
 
 logger = logging.getLogger(__name__)
 
-# AudioShake API Configuration
-AUDIOSHAKE_API_BASE_URL = os.getenv('AUDIOSHAKE_API_URL', 'https://api.audioshake.ai')
-AUDIOSHAKE_CLIENT_ID = os.getenv('AUDIOSHAKE_CLIENT_ID', '')
-AUDIOSHAKE_CLIENT_SECRET = os.getenv('AUDIOSHAKE_CLIENT_SECRET', '')
 
-
-class AudioShakeSeparator:
-    """AudioShake SDK client for stem separation."""
+class DemucsSeparator:
+    """Demucs v4 stem separator."""
     
-    def __init__(self, client_id: Optional[str] = None, client_secret: Optional[str] = None):
+    def __init__(self, model: str = "htdemucs", device: Optional[str] = None):
         """
-        Initialize AudioShake separator client.
+        Initialize Demucs separator.
         
         Args:
-            client_id: AudioShake client ID (defaults to env var)
-            client_secret: AudioShake client secret (defaults to env var)
+            model: Demucs model to use (default: htdemucs for v4)
+            device: Device to use ('cpu', 'cuda', etc.). Auto-detects if None.
         """
-        self.client_id = client_id or AUDIOSHAKE_CLIENT_ID
-        self.client_secret = client_secret or AUDIOSHAKE_CLIENT_SECRET
-        self.api_base_url = AUDIOSHAKE_API_BASE_URL
-        self.session = requests.Session()
-        self.access_token = None
+        self.model = model
+        self.device = device
         
-        if not self.client_id or not self.client_secret:
-            logger.warning("AudioShake credentials not configured. Set AUDIOSHAKE_CLIENT_ID and AUDIOSHAKE_CLIENT_SECRET environment variables.")
-    
-    def authenticate(self) -> bool:
-        """
-        Authenticate with AudioShake API and obtain access token.
-        
-        Returns:
-            True if authentication successful, False otherwise
-        """
-        if not self.client_id or not self.client_secret:
-            logger.error("Cannot authenticate: missing credentials")
-            return False
-        
-        try:
-            auth_url = f"{self.api_base_url}/oauth/token"
-            response = self.session.post(
-                auth_url,
-                data={
-                    'grant_type': 'client_credentials',
-                    'client_id': self.client_id,
-                    'client_secret': self.client_secret
-                },
-                timeout=30
-            )
-            response.raise_for_status()
-            data = response.json()
-            self.access_token = data.get('access_token')
-            
-            if self.access_token:
-                self.session.headers.update({
-                    'Authorization': f'Bearer {self.access_token}'
-                })
-                logger.info("Successfully authenticated with AudioShake API")
-                return True
-            else:
-                logger.error("Authentication failed: no access token received")
-                return False
-                
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Authentication error: {e}")
-            return False
-    
-    def upload_audio(self, audio_file_path: str) -> Optional[str]:
-        """
-        Upload audio file to AudioShake for processing.
-        
-        Args:
-            audio_file_path: Path to audio file to upload
-            
-        Returns:
-            Task ID if successful, None otherwise
-        """
-        if not self.access_token:
-            if not self.authenticate():
-                return None
-        
-        try:
-            upload_url = f"{self.api_base_url}/v1/tasks"
-            
-            with open(audio_file_path, 'rb') as audio_file:
-                files = {'file': (os.path.basename(audio_file_path), audio_file, 'audio/wav')}
-                data = {
-                    'type': 'stem-separation',
-                    'stems': 'vocals,drums,bass,other'  # Standard stem types
-                }
-                
-                response = self.session.post(
-                    upload_url,
-                    files=files,
-                    data=data,
-                    timeout=300  # 5 minute timeout for upload
-                )
-                response.raise_for_status()
-                result = response.json()
-                task_id = result.get('task_id') or result.get('id')
-                
-                if task_id:
-                    logger.info(f"Audio uploaded successfully. Task ID: {task_id}")
-                    return task_id
-                else:
-                    logger.error(f"Upload failed: no task ID in response: {result}")
-                    return None
-                    
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Upload error: {e}")
-            if hasattr(e.response, 'text'):
-                logger.error(f"Response: {e.response.text}")
-            return None
-        except Exception as e:
-            logger.error(f"Unexpected error during upload: {e}")
-            return None
-    
-    def check_task_status(self, task_id: str) -> Dict:
-        """
-        Check the status of a separation task.
-        
-        Args:
-            task_id: Task ID returned from upload
-            
-        Returns:
-            Dictionary with task status information
-        """
-        if not self.access_token:
-            if not self.authenticate():
-                return {'status': 'error', 'message': 'Authentication failed'}
-        
-        try:
-            status_url = f"{self.api_base_url}/v1/tasks/{task_id}"
-            response = self.session.get(status_url, timeout=30)
-            response.raise_for_status()
-            return response.json()
-            
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Status check error: {e}")
-            return {'status': 'error', 'message': str(e)}
-    
-    def wait_for_completion(self, task_id: str, max_wait_time: int = 600, poll_interval: int = 5) -> Dict:
-        """
-        Poll for task completion.
-        
-        Args:
-            task_id: Task ID to check
-            max_wait_time: Maximum time to wait in seconds (default: 10 minutes)
-            poll_interval: Time between polls in seconds (default: 5 seconds)
-            
-        Returns:
-            Final task status dictionary
-        """
-        start_time = time.time()
-        
-        while time.time() - start_time < max_wait_time:
-            status = self.check_task_status(task_id)
-            task_status = status.get('status', 'unknown').lower()
-            
-            logger.info(f"Task {task_id} status: {task_status}")
-            
-            if task_status in ['completed', 'done', 'success']:
-                return status
-            elif task_status in ['failed', 'error']:
-                logger.error(f"Task {task_id} failed: {status.get('message', 'Unknown error')}")
-                return status
-            
-            time.sleep(poll_interval)
-        
-        logger.warning(f"Task {task_id} did not complete within {max_wait_time} seconds")
-        return {'status': 'timeout', 'message': 'Task did not complete in time'}
-    
-    def download_stems(self, task_id: str, output_dir: str) -> Dict[str, str]:
-        """
-        Download separated stems from completed task.
-        
-        Args:
-            task_id: Task ID
-            output_dir: Directory to save stem files
-            
-        Returns:
-            Dictionary mapping stem names to file paths
-        """
-        if not self.access_token:
-            if not self.authenticate():
-                return {}
-        
-        os.makedirs(output_dir, exist_ok=True)
-        stem_files = {}
-        
-        try:
-            # Get task details to find download URLs
-            task_info = self.check_task_status(task_id)
-            
-            if task_info.get('status') not in ['completed', 'done', 'success']:
-                logger.error(f"Cannot download stems: task not completed. Status: {task_info.get('status')}")
-                return {}
-            
-            # Extract download URLs from task info
-            # AudioShake API structure may vary, so we'll handle multiple formats
-            stems_data = task_info.get('stems', {})
-            if isinstance(stems_data, dict):
-                for stem_name, stem_info in stems_data.items():
-                    if isinstance(stem_info, dict):
-                        download_url = stem_info.get('url') or stem_info.get('download_url')
-                    elif isinstance(stem_info, str):
-                        download_url = stem_info
-                    else:
-                        continue
-                    
-                    if download_url:
-                        output_path = os.path.join(output_dir, f"{stem_name}.wav")
-                        self._download_file(download_url, output_path)
-                        stem_files[stem_name] = output_path
-            
-            # Alternative: check for direct download links in response
-            if not stem_files:
-                download_urls = task_info.get('download_urls', {})
-                for stem_name, url in download_urls.items():
-                    output_path = os.path.join(output_dir, f"{stem_name}.wav")
-                    self._download_file(url, output_path)
-                    stem_files[stem_name] = output_path
-            
-            logger.info(f"Downloaded {len(stem_files)} stems to {output_dir}")
-            return stem_files
-            
-        except Exception as e:
-            logger.error(f"Error downloading stems: {e}")
-            return {}
-    
-    def _download_file(self, url: str, output_path: str) -> bool:
-        """Download a file from URL to output path."""
-        try:
-            response = self.session.get(url, stream=True, timeout=300)
-            response.raise_for_status()
-            
-            with open(output_path, 'wb') as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    if chunk:
-                        f.write(chunk)
-            
-            logger.info(f"Downloaded {output_path}")
-            return True
-            
-        except Exception as e:
-            logger.error(f"Error downloading {url}: {e}")
-            return False
-    
     def separate_audio(self, audio_file_path: str, output_dir: Optional[str] = None) -> Dict[str, str]:
         """
-        Complete workflow: upload, wait, and download stems.
+        Separate audio file into stems using Demucs.
         
         Args:
-            audio_file_path: Path to audio file
+            audio_file_path: Path to audio file to separate
             output_dir: Directory for output stems (defaults to temp directory)
             
         Returns:
@@ -275,34 +42,108 @@ class AudioShakeSeparator:
         if output_dir is None:
             output_dir = tempfile.mkdtemp(prefix='stems_')
         
-        # Step 1: Upload
-        task_id = self.upload_audio(audio_file_path)
-        if not task_id:
-            logger.error("Failed to upload audio file")
-            return {}
+        os.makedirs(output_dir, exist_ok=True)
         
-        # Step 2: Wait for completion
-        final_status = self.wait_for_completion(task_id)
-        if final_status.get('status') not in ['completed', 'done', 'success']:
-            logger.error(f"Separation failed: {final_status}")
+        try:
+            # Build demucs command
+            cmd = [
+                'python', '-m', 'demucs.separate',
+                '--model', self.model,
+                '--out', output_dir,
+                '--filename', '{stem}.{ext}',
+            ]
+            
+            # Add device if specified
+            if self.device:
+                cmd.extend(['--device', self.device])
+            
+            # Add input file
+            cmd.append(audio_file_path)
+            
+            logger.info(f"Running Demucs separation: {' '.join(cmd)}")
+            
+            # Run demucs
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=1800  # 30 minute timeout
+            )
+            
+            if result.returncode != 0:
+                logger.error(f"Demucs separation failed: {result.stderr}")
+                return {}
+            
+            logger.info(f"Demucs separation completed. Output: {result.stdout}")
+            
+            # Find the output files
+            # Demucs creates: output_dir/model_name/track_name/stem.wav
+            stem_files = {}
+            base_name = Path(audio_file_path).stem
+            
+            # Look for the separated files
+            model_dir = os.path.join(output_dir, self.model)
+            if os.path.exists(model_dir):
+                track_dir = None
+                # Find the track directory (usually matches input filename)
+                for item in os.listdir(model_dir):
+                    item_path = os.path.join(model_dir, item)
+                    if os.path.isdir(item_path):
+                        track_dir = item_path
+                        break
+                
+                if track_dir:
+                    # Demucs outputs: vocals.wav, drums.wav, bass.wav, other.wav
+                    stem_names = ['vocals', 'drums', 'bass', 'other']
+                    for stem_name in stem_names:
+                        stem_path = os.path.join(track_dir, f"{stem_name}.wav")
+                        if os.path.exists(stem_path):
+                            # Copy to output_dir with simpler naming
+                            output_path = os.path.join(output_dir, f"{stem_name}.wav")
+                            import shutil
+                            shutil.copy2(stem_path, output_path)
+                            stem_files[stem_name] = output_path
+                            logger.info(f"Found stem: {stem_name} -> {output_path}")
+            
+            if not stem_files:
+                logger.warning("No stem files found after separation")
+                # Try alternative location structure
+                for root, dirs, files in os.walk(output_dir):
+                    for file in files:
+                        if file.endswith('.wav'):
+                            file_path = os.path.join(root, file)
+                            stem_name = Path(file).stem
+                            if stem_name in ['vocals', 'drums', 'bass', 'other']:
+                                output_path = os.path.join(output_dir, f"{stem_name}.wav")
+                                if file_path != output_path:
+                                    import shutil
+                                    shutil.copy2(file_path, output_path)
+                                stem_files[stem_name] = output_path
+            
+            logger.info(f"Separated {len(stem_files)} stems: {list(stem_files.keys())}")
+            return stem_files
+            
+        except subprocess.TimeoutExpired:
+            logger.error("Demucs separation timed out after 30 minutes")
             return {}
-        
-        # Step 3: Download stems
-        stem_files = self.download_stems(task_id, output_dir)
-        return stem_files
+        except Exception as e:
+            logger.error(f"Error during Demucs separation: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return {}
 
 
-def separate_audio_file(audio_file_path: str, output_dir: Optional[str] = None) -> Dict[str, str]:
+def separate_audio_file(audio_file_path: str, output_dir: Optional[str] = None, model: str = "htdemucs") -> Dict[str, str]:
     """
-    Convenience function to separate audio file using AudioShake.
+    Convenience function to separate audio file using Demucs v4.
     
     Args:
         audio_file_path: Path to audio file
         output_dir: Output directory for stems
+        model: Demucs model to use (default: htdemucs for v4)
         
     Returns:
         Dictionary mapping stem names to file paths
     """
-    separator = AudioShakeSeparator()
+    separator = DemucsSeparator(model=model)
     return separator.separate_audio(audio_file_path, output_dir)
-

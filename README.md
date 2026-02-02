@@ -1,13 +1,14 @@
 # YouTube Pipeline with Stem Separation
 
-A web application for downloading YouTube videos and separating them into individual audio stems (vocals, drums, bass, other) using AudioShake SDK.
+A web application for downloading YouTube videos and separating them into individual audio stems (vocals, drums, bass, other) using Demucs v4.
 
 ## Features
 
 * 🎵 Download YouTube videos as WAV files via y2down.cc
-* 🎚️ Separate audio into stems using AudioShake SDK
+* 🎚️ Separate audio into stems using Demucs v4 (free, open-source)
 * 🌐 Simple web interface with authentication
 * ⚡ Fast downloads and processing
+* 🆓 No API credentials required - runs locally
 
 ## Setup
 
@@ -15,7 +16,8 @@ A web application for downloading YouTube videos and separating them into indivi
 
 * Python 3.11+
 * Chrome/Chromium browser (for Selenium)
-* AudioShake API credentials (Client ID and Client Secret)
+* PyTorch (automatically installed with dependencies)
+* GPU optional but recommended for faster processing
 
 ### Installation
 
@@ -30,13 +32,11 @@ cd ytpipelinev3Stem
 pip install -r requirements.txt
 ```
 
-3. Configure environment variables:
-   - Copy `env.example` to `.env` (if available) or set environment variables:
-   - `AUDIOSHAKE_CLIENT_ID` - Your AudioShake client ID
-   - `AUDIOSHAKE_CLIENT_SECRET` - Your AudioShake client secret
-   - `AUDIOSHAKE_API_URL` - AudioShake API URL (default: https://api.audioshake.ai)
+3. Configure environment variables (optional):
    - `APP_PASSWORD` - Password for web interface (default: CookieRocks)
    - `SECRET_KEY` - Flask session secret key
+   - `HOST` - Server host (default: 0.0.0.0)
+   - `PORT` - Server port (default: 5000)
 
 4. Run the server:
 ```bash
@@ -58,18 +58,20 @@ http://localhost:5000
 
 ## Stem Separation
 
-The application uses AudioShake SDK to separate audio into:
+The application uses Demucs v4 (Facebook's open-source model) to separate audio into:
 - **Vocals** - Isolated vocal track
 - **Drums** - Drum and percussion elements
 - **Bass** - Bass instruments
 - **Other** - All other instruments
 
-### Getting AudioShake Credentials
+### About Demucs v4
 
-1. Visit [AudioShake Developer Portal](https://developer.audioshake.ai)
-2. Sign up for an account
-3. Contact info@audioshake.ai for API credentials
-4. Set `AUDIOSHAKE_CLIENT_ID` and `AUDIOSHAKE_CLIENT_SECRET` environment variables
+Demucs v4 is a free, open-source deep learning model for music source separation. It runs locally on your machine - no API credentials or internet connection required after installation. The model will be automatically downloaded on first use.
+
+**Performance Tips:**
+- GPU acceleration is supported (CUDA) for faster processing
+- CPU processing is available but slower
+- First run will download the model (~1.5GB)
 
 ## Project Structure
 
@@ -77,7 +79,7 @@ The application uses AudioShake SDK to separate audio into:
 ytpipeStemEx/
 ├── api_server.py          # Flask backend server
 ├── downloader.py          # y2down.cc integration module
-├── stem_separator.py      # AudioShake SDK integration
+├── stem_separator.py      # Demucs v4 integration
 ├── index.html             # Web interface
 ├── login.html             # Login page
 ├── requirements.txt       # Python dependencies
@@ -102,8 +104,13 @@ ytpipeStemEx/
 1. Go to Render Dashboard
 2. Click "New +" → "Blueprint"
 3. Connect your GitHub repository
-4. Set environment variables for AudioShake credentials
+4. Set environment variables (APP_PASSWORD, SECRET_KEY, etc.)
 5. Deploy
+
+**Note:** Demucs requires significant resources. For production deployments, consider:
+- Using GPU instances for faster processing
+- Setting appropriate timeout values
+- Monitoring memory usage (model requires ~2GB RAM)
 
 ### Other Platforms
 
@@ -121,5 +128,5 @@ MIT
 
 ## About
 
-This project extends the original ytPipelineV3 with AudioShake SDK integration for professional-grade stem separation.
+This project extends the original ytPipelineV3 with Demucs v4 integration for free, open-source stem separation.
 
