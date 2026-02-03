@@ -1,9 +1,8 @@
 services:
   - type: web
     name: ytpipeline-stem-separation
-    env: python
-    buildCommand: apt-get update && apt-get install -y chromium-browser chromium-chromedriver && pip install -r requirements.txt
-    startCommand: gunicorn api_server:app --bind 0.0.0.0:$PORT
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
     envVars:
       - key: APP_PASSWORD
         value: CookieRocks

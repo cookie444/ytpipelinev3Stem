@@ -41,12 +41,16 @@ def get_download_url(youtube_url: str) -> Tuple[Optional[str], Optional[str], Op
         chrome_options.add_experimental_option('useAutomationExtension', False)
         
         # Try to find Chrome/Chromium binary (for Render/Linux environments)
+        # Check environment variable first (set by Dockerfile)
         chrome_binary_paths = [
-            '/usr/bin/chromium-browser',
+            os.getenv('CHROME_BIN'),  # From Dockerfile
             '/usr/bin/chromium',
+            '/usr/bin/chromium-browser',
             '/usr/bin/google-chrome',
             '/usr/bin/chrome',
         ]
+        # Filter out None values
+        chrome_binary_paths = [p for p in chrome_binary_paths if p]
         chrome_binary = None
         for path in chrome_binary_paths:
             if os.path.exists(path):
@@ -56,10 +60,14 @@ def get_download_url(youtube_url: str) -> Tuple[Optional[str], Optional[str], Op
                 break
         
         # Try to find ChromeDriver (for Render/Linux environments)
+        # Check environment variable first (set by Dockerfile)
         chromedriver_paths = [
+            os.getenv('CHROMEDRIVER_PATH'),  # From Dockerfile
             '/usr/bin/chromedriver',
             '/usr/lib/chromium-browser/chromedriver',
         ]
+        # Filter out None values
+        chromedriver_paths = [p for p in chromedriver_paths if p]
         chromedriver_path = None
         for path in chromedriver_paths:
             if os.path.exists(path):
