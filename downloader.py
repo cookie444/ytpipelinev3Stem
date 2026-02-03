@@ -25,7 +25,7 @@ def get_download_url(youtube_url: str) -> Tuple[Optional[str], Optional[str], Op
     """Get download URL from y2down.cc using headless browser."""
     driver = None
     try:
-        base_url = "https://y2down.cc/enV8/youtube-wav"
+        base_url = "https://y2down.cc/enmw/"
         logger.info(f"Submitting YouTube URL to y2down.cc: {youtube_url}")
         
         # Setup Chrome options
