@@ -94,8 +94,30 @@ async function handleRegularDownload(youtubeUrl) {
         }
 
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || `Server error: ${response.status}`);
+            // Check if response is JSON before parsing
+            const contentType = response.headers.get('content-type');
+            let errorMessage = `Server error: ${response.status}`;
+            
+            if (contentType && contentType.includes('application/json')) {
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.error || errorMessage;
+                } catch (e) {
+                    // If JSON parsing fails, try to get text
+                    const text = await response.text();
+                    errorMessage = text || errorMessage;
+                }
+            } else {
+                // Not JSON, try to get text
+                try {
+                    const text = await response.text();
+                    errorMessage = text.substring(0, 200) || errorMessage; // Limit length
+                } catch (e) {
+                    // Keep default error message
+                }
+            }
+            
+            throw new Error(errorMessage);
         }
 
         updateProgress(50, 'Downloading file...');
@@ -156,8 +178,30 @@ async function handleStemSeparation(youtubeUrl) {
         }
 
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || `Server error: ${response.status}`);
+            // Check if response is JSON before parsing
+            const contentType = response.headers.get('content-type');
+            let errorMessage = `Server error: ${response.status}`;
+            
+            if (contentType && contentType.includes('application/json')) {
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.error || errorMessage;
+                } catch (e) {
+                    // If JSON parsing fails, try to get text
+                    const text = await response.text();
+                    errorMessage = text || errorMessage;
+                }
+            } else {
+                // Not JSON, try to get text
+                try {
+                    const text = await response.text();
+                    errorMessage = text.substring(0, 200) || errorMessage; // Limit length
+                } catch (e) {
+                    // Keep default error message
+                }
+            }
+            
+            throw new Error(errorMessage);
         }
 
         updateStemProgress(50, 'Processing stems with Demucs v4...');
