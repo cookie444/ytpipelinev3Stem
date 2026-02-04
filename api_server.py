@@ -38,6 +38,30 @@ HOST = os.getenv('HOST', '0.0.0.0')
 APP_PASSWORD = os.getenv('APP_PASSWORD', 'CookieRocks')
 
 
+@app.errorhandler(500)
+def internal_error(error):
+    """Handle 500 errors and return JSON instead of HTML."""
+    logger.error(f"Internal server error: {error}")
+    import traceback
+    logger.error(traceback.format_exc())
+    return jsonify({
+        'success': False,
+        'error': 'Internal server error. Please check the logs for details.'
+    }), 500
+
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    """Handle all unhandled exceptions and return JSON."""
+    logger.error(f"Unhandled exception: {e}")
+    import traceback
+    logger.error(traceback.format_exc())
+    return jsonify({
+        'success': False,
+        'error': f'An error occurred: {str(e)}'
+    }), 500
+
+
 def login_required(f):
     """Decorator to require authentication for routes."""
     @wraps(f)
@@ -358,10 +382,16 @@ def separate_stems():
 
 
 if __name__ == '__main__':
-    os.makedirs('static', exist_ok=True)
-    
-    logger.info(f"Starting YouTube Downloader on {HOST}:{PORT}")
-    logger.info(f"Web interface available at http://{HOST}:{PORT}")
-    logger.info(f"Password: {APP_PASSWORD}")
-    
-    app.run(host=HOST, port=PORT, debug=False)
+    try:
+        os.makedirs('static', exist_ok=True)
+        
+        logger.info(f"Starting YouTube Downloader on {HOST}:{PORT}")
+        logger.info(f"Web interface available at http://{HOST}:{PORT}")
+        logger.info(f"Password: {APP_PASSWORD}")
+        
+        app.run(host=HOST, port=PORT, debug=False)
+    except Exception as e:
+        logger.error(f"Failed to start server: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        raise

@@ -25,5 +25,5 @@ COPY . .
 EXPOSE 5000
 
 # Run the application (PORT is set by Render)
-CMD gunicorn api_server:app --bind 0.0.0.0:${PORT:-5000}
+CMD ["sh", "-c", "gunicorn api_server:app --bind 0.0.0.0:${PORT:-5000}"]
 
